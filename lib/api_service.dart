@@ -1,12 +1,13 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class ApiService {
-  final String apiUrl = 'https://api.nobelprize.org/v1/country.csv'; // Use the correct API URL
+  final String countriesApiUrl = 'https://api.nobelprize.org/v1/country.csv';
+  final String laureatesApiUrl =
+      'http://api.nobelprize.org/v1/laureate.csv?gender=All';
 
   Future<List<String>> fetchCountries() async {
-    final response = await http.get(Uri.parse(apiUrl));
+    final response = await http.get(Uri.parse(countriesApiUrl));
     if (response.statusCode == 200) {
       final List<String> countryLines = response.body.split('\n');
       if (countryLines.length > 1) {
@@ -27,41 +28,58 @@ class ApiService {
       throw Exception('Failed to load country data from the API');
     }
   }
-}
 
-void main() {
-  runApp(MyApp());
-}
+  Future<List<Map<String, String?>>> fetchWinningCountries() async {
+    final response = await http.get(Uri.parse(laureatesApiUrl));
+    if (response.statusCode == 200) {
+      final List<String> lines = response.body.split('\n');
+      List<Map<String, String?>> countriesData = [];
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Country List'),
-        ),
-        body: Center(
-          child: FutureBuilder<List<String>>(
-            future: ApiService().fetchCountries(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return ListView.builder(
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(snapshot.data![index]),
-                    );
-                  },
-                );
-              } else if (snapshot.hasError) {
-                return Text('${snapshot.error}');
-              }
-              return CircularProgressIndicator();
-            },
-          ),
-        ),
-      ),
-    );
+      for (int i = 1; i < lines.length; i++) {
+        final List<String> columns = lines[i].split(',');
+
+        // Ensure there are at least 18 columns (0-based index)
+        if (columns.length >= 18) {
+          final String country = columns[19]; // bornCountry
+          final String category = columns[13]; // category
+          final String year = columns[12]; // year
+
+          if (country.isNotEmpty && category.isNotEmpty && year.isNotEmpty) {
+            countriesData.add({
+              'countryName': country,
+              'category': category,
+              'year': year,
+            });
+          }
+        }
+      }
+
+      return countriesData;
+    } else {
+      throw Exception('Failed to load data from the API');
+    }
+  }
+
+
+  Future<Map<String, String?>> fetchCountryFlags(
+      Set<String?> countryNames) async {
+    Map<String, String?> countryFlags = {};
+
+    for (String? countryName in countryNames) {
+      if (countryName != null) {
+        final countryCode = countryName.split(' ')[0];
+        final flagAssetPath = 'assets/$countryCode.svg';
+
+        try {
+          final flagData = await rootBundle.loadString(flagAssetPath);
+          countryFlags[countryName] = flagData;
+        } catch (e) {
+          // Handle errors, e.g., flag not found for a country
+          countryFlags[countryName] = null;
+        }
+      }
+    }
+
+    return countryFlags;
   }
 }
