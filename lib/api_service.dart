@@ -1,6 +1,4 @@
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
-import 'package:csv/csv.dart';
 
 class ApiService {
   final String countriesApiUrl = 'https://api.nobelprize.org/v1/country.csv';
@@ -131,5 +129,42 @@ class ApiService {
     }
 
     return countryFlags;
+  }
+
+  Future<List<Map<String, String>>> fetchWinnersByYearRange(
+      int startYear,
+      int endYear,
+      ) async {
+    final apiUrl = 'http://api.nobelprize.org/v1/prize.csv?year=$startYear&yearTo=$endYear';
+
+    final response = await http.get(Uri.parse(apiUrl));
+
+    if (response.statusCode == 200) {
+      final List<String> lines = response.body.split('\n');
+
+      List<Map<String, String>> winnersData = [];
+
+      for (int i = 1; i < lines.length; i++) {
+        final List<String> columns = lines[i].split(',');
+        if (columns.length >= 8) {
+          final String year = columns[0];
+          final String category = columns[1];
+          final String firstName = columns[4];
+          final String surname = columns[5];
+
+          if (year.isNotEmpty && category.isNotEmpty && firstName.isNotEmpty && surname.isNotEmpty) {
+            winnersData.add({
+              'year': year,
+              'category': category,
+              'firstname': firstName,
+              'surname': surname,
+            });
+          }
+        }
+      }
+      return winnersData;
+    } else {
+      throw Exception('Failed to load winners data from the API');
+    }
   }
 }

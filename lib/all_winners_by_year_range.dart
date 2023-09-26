@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:nobel_app/api_service.dart'; // Import your ApiService
 
 class AllWinnersByYearRangeScreen extends StatefulWidget {
-  final int startYear; // Add startYear as a parameter
-  final int endYear; // Add endYear as a parameter
+  final int startYear;
+  final int endYear;
 
   AllWinnersByYearRangeScreen({
     required this.startYear,
@@ -16,9 +17,31 @@ class AllWinnersByYearRangeScreen extends StatefulWidget {
 
 class _AllWinnersByYearRangeScreenState
     extends State<AllWinnersByYearRangeScreen> {
-  // Your implementation for this screen
-  // You can access widget.startYear and widget.endYear to get the values
-  // passed from the previous screen.
+  final ApiService apiService = ApiService(); // Create an instance of ApiService
+
+  List<Map<String, String>> winnersData = []; // Store the fetched data here
+
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  void fetchData() async {
+    try {
+      final data = await apiService.fetchWinnersByYearRange(
+        widget.startYear,
+        widget.endYear,
+      );
+      setState(() {
+        winnersData = data;
+      });
+    } catch (e) {
+      // Handle errors
+      print('Error fetching data: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,7 +49,41 @@ class _AllWinnersByYearRangeScreenState
         title: Text('Winners from ${widget.startYear} to ${widget.endYear}'),
       ),
       body: Center(
-        // Your content here
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0), // Add horizontal padding
+          child: ListView.builder(
+            itemCount: winnersData.length,
+            itemBuilder: (context, index) {
+              final winner = winnersData[index];
+              final currentYear = winner['year'] ?? '';
+
+              // Check if the year is different from the previous item
+              final isYearChange = index == 0 || currentYear != (winnersData[index - 1]['year'] ?? '');
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isYearChange)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        currentYear,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18.0,
+                        ),
+                      ),
+                    ),
+                  ListTile(
+                    title: Text(winner['surname'] ?? ''),
+                    subtitle: Text(winner['firstname'] ?? ''),
+                    trailing: Text(winner['category'] ?? ''),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
