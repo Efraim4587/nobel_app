@@ -4,23 +4,36 @@ import 'package:nobel_app/api_service.dart';
 
 class AllWinningCountriesScreen extends StatelessWidget {
   final ApiService apiService = ApiService();
-  late Future<List<String>> countriesFuture;
-  late Future<List<Map<String, String?>>> winningCountriesFuture;
-  late Future<Map<String, String?>> countryFlags;
+  late Future<List<Map<String, dynamic>>> winningCountriesFuture;
+  late Map<String, String> countryCodes;
 
   AllWinningCountriesScreen({Key? key}) {
-    countriesFuture = apiService.fetchCountries();
-    winningCountriesFuture = apiService.fetchWinningCountries();
-    countryFlags = loadCountryFlags();
+    winningCountriesFuture = loadWinningCountries();
   }
 
-  Future<Map<String, String?>> loadCountryFlags() async {
-    final countryNames = await countriesFuture;
-    final flags = await apiService.fetchCountryFlags(countryNames.toSet());
+  Future<List<Map<String, dynamic>>> loadWinningCountries() async {
+    final List<Map<String, String?>> laureateData = await apiService.fetchWinningCountries();
 
-    return flags;
+    List<Map<String, dynamic>> winningCountries = [];
+
+    for (final laureate in laureateData) {
+      final String countryName = laureate['countryName'] ?? '';
+      final String category = laureate['category'] ?? '';
+      final String year = laureate['year'] ?? '';
+      final String countryCode = laureate['countryCode'] ?? '';
+
+      if (countryName.isNotEmpty && category.isNotEmpty && year.isNotEmpty) {
+        winningCountries.add({
+          'countryName': countryName,
+          'category': category,
+          'year': year,
+          'countryCode': countryCode,
+        });
+      }
+    }
+
+    return winningCountries;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -29,11 +42,7 @@ class AllWinningCountriesScreen extends StatelessWidget {
         title: const Text('All Winning Countries'),
       ),
       body: FutureBuilder(
-        future: Future.wait([
-          countriesFuture,
-          winningCountriesFuture,
-          countryFlags,
-        ]),
+        future: winningCountriesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -44,9 +53,8 @@ class AllWinningCountriesScreen extends StatelessWidget {
               child: Text('Error: ${snapshot.error}'),
             );
           } else {
-            final List<String> countries = (snapshot.data?[0] as List<String>?) ?? [];
-            final List<Map<String, String?>> winningCountries = (snapshot.data?[1] as List<Map<String, String?>>?) ?? [];
-            final Map<String, String?> flags = snapshot.data?[2] as Map<String, String?>? ?? {};
+            final List<Map<String, dynamic>> winningCountries =
+            snapshot.data as List<Map<String, dynamic>>;
 
             return ListView.builder(
               itemCount: winningCountries.length,
@@ -55,16 +63,13 @@ class AllWinningCountriesScreen extends StatelessWidget {
                   return const SizedBox();
                 }
                 final countryData = winningCountries[index];
-                final countryName = countryData['countryName'];
-                final category = countryData['category'];
-                final year = countryData['year'];
-                if (countryName == null || category == null || year == null) {
-                  return SizedBox();
-                }
+                final String countryName = countryData['countryName'];
+                final String category = countryData['category'];
+                final String year = countryData['year'];
+                final String countryCode = countryData['countryCode'];
+                print('cc: $countryCode');
 
-                final countryCode = flags[countryName];
-
-                final flagImagePath = countryCode != null
+                final flagImagePath = countryCode.isNotEmpty
                     ? 'assets/flags/${countryCode.toLowerCase()}.svg'
                     : 'assets/flags/il.svg';
 
@@ -75,9 +80,8 @@ class AllWinningCountriesScreen extends StatelessWidget {
                     height: 30,
                   ),
                   title: Text('$countryName - $year'),
-                  subtitle: Text('Category: $category'),
+                  subtitle: Text(category),
                 );
-
               },
             );
           }
@@ -86,3 +90,4 @@ class AllWinningCountriesScreen extends StatelessWidget {
     );
   }
 }
+

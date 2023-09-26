@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+import 'package:csv/csv.dart';
 
 class ApiService {
   final String countriesApiUrl = 'https://api.nobelprize.org/v1/country.csv';
@@ -35,20 +36,35 @@ class ApiService {
       final List<String> lines = response.body.split('\n');
       List<Map<String, String?>> countriesData = [];
 
+      // Read the country code data from the CSV
+      final List<Map<String, String?>> countryCodes = await fetchCountryCodes(); // Corrected type
+
       for (int i = 1; i < lines.length; i++) {
         final List<String> columns = lines[i].split(',');
-
-        // Ensure there are at least 18 columns (0-based index)
         if (columns.length >= 18) {
-          final String country = columns[19]; // bornCountry
-          final String category = columns[13]; // category
-          final String year = columns[12]; // year
+          String country = columns[19];
+          final String category = columns[13];
+          final String year = columns[12];
 
+          String countryCode = '';
+
+          if(country.contains("now")){
+            int start = country.indexOf("now") + 4;
+            int end = country.indexOf(")");
+            country = country.substring(start, end);
+          }
+          
           if (country.isNotEmpty && category.isNotEmpty && year.isNotEmpty) {
+            for (final pair in countryCodes) {
+              if (pair.values.first == country) {
+                countryCode = pair.values.last ?? '';
+              }
+            }
             countriesData.add({
               'countryName': country,
               'category': category,
               'year': year,
+              'countryCode': countryCode,
             });
           }
         }
@@ -61,23 +77,57 @@ class ApiService {
   }
 
 
+
+  Future<List<Map<String, String?>>> fetchCountryCodes() async {
+    final response = await http.get(Uri.parse(countriesApiUrl));
+    if (response.statusCode == 200) {
+      final List<String> lines = response.body.split('\n');
+      List<Map<String, String?>> countryCodes = [];
+
+      for (int i = 1; i < lines.length; i++) {
+        final List<String> columns = lines[i].split(',');
+        if (columns.length >= 2) {
+          final String countryName = columns[0];
+          final String countryCode = columns[1];
+
+          if (countryName.isNotEmpty && countryCode.isNotEmpty) {
+            countryCodes.add({
+              'countryName': countryName,
+              'countryCode': countryCode,
+            });
+          }
+        }
+      }
+      return countryCodes;
+    } else {
+      throw Exception('Failed to load country code data from the API');
+    }
+  }
+
   Future<Map<String, String?>> fetchCountryFlags(
       Set<String?> countryNames) async {
     Map<String, String?> countryFlags = {};
 
-    for (String? countryName in countryNames) {
-      if (countryName != null) {
-        final countryCode = countryName.split(' ')[0];
-        final flagAssetPath = 'assets/$countryCode.svg';
+    // Fetch the CSV data from the provided URL
+    final response = await http.get(Uri.parse(countriesApiUrl));
 
-        try {
-          final flagData = await rootBundle.loadString(flagAssetPath);
-          countryFlags[countryName] = flagData;
-        } catch (e) {
-          // Handle errors, e.g., flag not found for a country
-          countryFlags[countryName] = null;
+    if (response.statusCode == 200) {
+      final List<String> countryLines = response.body.split('\n');
+
+      for (int i = 1; i < countryLines.length; i++) {
+        final List<String> columns = countryLines[i].split(',');
+
+        if (columns.isNotEmpty) {
+          final String countryName = columns[0];
+          final String countryCode = columns[1];
+
+          if (countryName.isNotEmpty && countryCode.isNotEmpty) {
+            countryFlags[countryName] = countryCode;
+          }
         }
       }
+    } else {
+      throw Exception('Failed to load country flags from the API');
     }
 
     return countryFlags;
