@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:nobel_app/winners_by_country.dart';
 
+import 'all_winners_by_year_range.dart';
 import 'all_winning_countries.dart';
 import 'api_service.dart';
 
@@ -9,7 +10,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +32,7 @@ class MyApp extends StatelessWidget {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -40,33 +41,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool showCountrySelection = false;
   bool showYearSelection = false;
-  List<String> countries = [];
-  List<String> startYears = [];
-  List<String> endYears = [];
-  String selectedStartYear = '1901';
-  String selectedEndYear = DateTime.now().year.toString();
+  String selectedCountry = 'Select a country';
+  String? selectedStartYear;
+  String selectedEndYear = 'Select an end year';
 
   final ApiService apiService = ApiService();
-  bool isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    initializeYears();
-  }
-
-  void initializeYears() {
-    for (int year = 1901; year <= DateTime.now().year; year++) {
-      startYears.add(year.toString());
-      endYears.add(year.toString());
-    }
-    endYears = endYears.reversed.toList();
-  }
 
   void toggleCountrySelection() {
     setState(() {
       showCountrySelection = !showCountrySelection;
       showYearSelection = false;
+      selectedStartYear = null;
+      selectedEndYear = 'Select an end year';
     });
   }
 
@@ -74,13 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       showYearSelection = !showYearSelection;
       showCountrySelection = false;
-    });
-  }
-
-  void hideAllSelection() {
-    setState(() {
-      showYearSelection = false;
-      showCountrySelection = false;
+      selectedCountry = 'Select a country';
     });
   }
 
@@ -90,157 +70,238 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Nobel App'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            MouseRegion(
-              onEnter: (_) {
-                setState(() {
-                  isHovered = true;
-                });
-              },
-              onExit: (_) {
-                setState(() {
-                  isHovered = false;
-                });
-              },
-              child: AnimatedContainer(
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 150), // Added space
+              AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(isHovered ? 20.0 : 0.0),
+                  borderRadius: BorderRadius.circular(20.0),
                   border: Border.all(
                     color: Colors.blue,
                     width: 2.0,
                   ),
                 ),
-                child: Image.asset(
-                  'assets/nobel_prize_logo.png',
-                  fit: BoxFit.cover,
+                child: ClipRRect( // Added a ClipRRect for image border radius
+                  borderRadius: BorderRadius.circular(18.0),
+                  child: Image.asset(
+                    'assets/nobel_prize_logo.png',
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Welcome to Nobel App!',
-              style: Theme.of(context).textTheme.headline6,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                toggleCountrySelection();
-                if (showCountrySelection) {
-                  fetchCountryList();
-                }
-              },
-              child: const Text('Winners by Country'),
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              height: showCountrySelection ? null : 0,
-              child: showCountrySelection
-                  ? Column(
-                children: [
-                  const SizedBox(height: 20),
-                  DropdownButton<String>(
-                    hint: const Text('Choose a country'),
-                    value: null,
-                    onChanged: (newValue) {},
-                    items: countries.map((country) {
-                      return DropdownMenuItem(
-                        value: country,
-                        child: Text(country),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              )
-                  : null,
-            ),
-            ElevatedButton(
-              onPressed: () {
-                toggleYearSelection();
-              },
-              child: const Text('Winners by Year Range'),
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              height: showYearSelection ? null : 0,
-              child: showYearSelection
-                  ? Column(
-                children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Select start year:',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  DropdownButton<String>(
-                    value: selectedStartYear,
-                    onChanged: (newValue) {
-                      setState(() {
-                        selectedStartYear = newValue!;
-                      });
-                    },
-                    items: startYears.map((year) {
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(year),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Select end year:',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  DropdownButton<String>(
-                    value: selectedEndYear,
-                    onChanged: (newValue) {
-                      setState(() {
-                        selectedEndYear = newValue!;
-                      });
-                    },
-                    items: endYears.map((year) {
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(year),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              )
-                  : null,
-            ),
-            ElevatedButton(
-              onPressed: () {
-                hideAllSelection();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => AllWinningCountriesScreen(),
-                  ),
-                );
-              },
-              child: const Text('Winning Countries'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Welcome to Nobel App!',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  hideAllSelection();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => AllWinningCountriesScreen(),
+                    ),
+                  );
+                },
+                child: const Text('Winning Countries'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  hideAllSelection();
+                  toggleCountrySelection(); // Toggle country selection
+                },
+                child: const Text('Winners by Country'),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: showCountrySelection ? null : 0,
+                child: showCountrySelection
+                    ? Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Select a country:',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    FutureBuilder<List<String>>(
+                      future: apiService.fetchCountries(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const CircularProgressIndicator();
+                        } else if (snapshot.hasError) {
+                          return Text('Error: ${snapshot.error}');
+                        } else if (!snapshot.hasData ||
+                            snapshot.data!.isEmpty) {
+                          return const Text('No countries available.');
+                        } else {
+                          return DropdownButton<String>(
+                            hint: const Text('Select a country'), // Default text
+                            value: selectedCountry,
+                            onChanged: (newValue) {
+                              if (newValue != null &&
+                                  newValue != 'Select a country') {
+                                setState(() {
+                                  selectedCountry = newValue;
+                                });
+                                // Navigate to Winners by Country screen with the selected country
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        WinnersByCountryScreen(
+                                          country: selectedCountry,
+                                          selectedCountry: '',
+                                        ),
+                                  ),
+                                );
+                              }
+                            },
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: 'Select a country', // Default text
+                                child: Text('Select a country'),
+                              ),
+                              ...snapshot.data!.map((country) {
+                                return DropdownMenuItem<String>(
+                                  value: country,
+                                  child: Text(country),
+                                );
+                              }).toList(),
+                            ],
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                )
+                    : null,
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  toggleYearSelection();
+                },
+                child: const Text('Winners by Year Range'),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: showYearSelection ? null : 0,
+                child: showYearSelection
+                    ? Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    // Dropdown for selecting commencement year
+                    if (!showCountrySelection)
+                      DropdownButton<String>(
+                        hint: const Text('Select a start year'), // Default text
+                        value: selectedStartYear,
+                        onChanged: (newValue) {
+                          if (newValue != null &&
+                              newValue != 'Select a start year') {
+                            setState(() {
+                              selectedStartYear = newValue;
+                              selectedEndYear = 'Select an end year';
+                            });
+                          }
+                        },
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: 'Select a start year', // Unique value
+                            child: Text('Select a start year'),
+                          ),
+                          ...List.generate(
+                            DateTime.now().year - 1900,
+                                (index) =>
+                                (DateTime.now().year - index).toString(),
+                          ).map((year) {
+                            return DropdownMenuItem<String>(
+                              value: year,
+                              child: Text(year),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    const SizedBox(height: 20),
+                    if (selectedStartYear != null)
+                      Column(
+                        children: [
+                          DropdownButton<String>(
+                            hint: const Text('Select an end year'), // Default text
+                            value: selectedEndYear,
+                            onChanged: (newValue) {
+                              if (newValue != null &&
+                                  newValue != 'Select an end year') {
+                                setState(() {
+                                  selectedEndYear = newValue;
+                                });
+                              }
+                            },
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: 'Select an end year', // Unique value
+                                child: Text('Select an end year'),
+                              ),
+                              ...List.generate(
+                                DateTime.now().year -
+                                    int.parse(selectedStartYear!) +
+                                    1,
+                                    (index) =>
+                                    (int.parse(selectedStartYear!) +
+                                        index)
+                                        .toString(),
+                              ).map((year) {
+                                return DropdownMenuItem<String>(
+                                  value: year.toString(),
+                                  child: Text(year.toString()),
+                                );
+                              }).toList(),
+                            ],
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (selectedStartYear != null &&
+                                  selectedEndYear != 'Select an end year') {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        AllWinnersByYearRangeScreen(
+                                          startYear:
+                                          int.parse(selectedStartYear!),
+                                          endYear: int.parse(selectedEndYear),
+                                        ),
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                              Colors.blue.withOpacity(0.8), // Slightly lighter color
+                            ),
+                            child: const Text('Show Winners'),
+                          ),
+                        ],
+                      ),
+                  ],
+                )
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> fetchCountryList() async {
-    try {
-      final List<String> countryList = await apiService.fetchCountries();
-      setState(() {
-        countries = countryList;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching country list: $e');
-      }
-    }
+  void hideAllSelection() {
+    setState(() {
+      showCountrySelection = false;
+      showYearSelection = false;
+    });
   }
 }
-

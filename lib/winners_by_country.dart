@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class WinnersByCountryScreen extends StatelessWidget {
   final String selectedCountry;
 
-  WinnersByCountryScreen({required this.selectedCountry});
+  WinnersByCountryScreen({required this.selectedCountry, required String country});
 
   @override
   Widget build(BuildContext context) {
