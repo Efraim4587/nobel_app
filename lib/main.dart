@@ -49,18 +49,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void toggleCountrySelection() {
     setState(() {
-      showCountrySelection = !showCountrySelection;
-      showYearSelection = false;
-      selectedStartYear = null;
-      selectedEndYear = 'Select an end year';
+      if (showCountrySelection) {
+        // Hide the selection list if it's already shown
+        showCountrySelection = false;
+      } else {
+        showCountrySelection = true;
+        showYearSelection = false;
+        selectedStartYear = null;
+        selectedEndYear = 'Select an end year';
+      }
     });
   }
 
   void toggleYearSelection() {
     setState(() {
-      showYearSelection = !showYearSelection;
-      showCountrySelection = false;
-      selectedCountry = 'Select a country';
+      if (showYearSelection) {
+        // Hide the selection list if it's already shown
+        showYearSelection = false;
+      } else {
+        showYearSelection = true;
+        showCountrySelection = false;
+        selectedCountry = 'Select a country';
+      }
     });
   }
 
@@ -114,7 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  hideAllSelection();
                   toggleCountrySelection(); // Toggle country selection
                 },
                 child: const Text('Winners by Country'),
@@ -126,10 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Column(
                   children: [
                     const SizedBox(height: 20),
-                    const Text(
-                      'Select a country:',
-                      style: TextStyle(fontSize: 18),
-                    ),
                     FutureBuilder<List<String>>(
                       future: apiService.fetchCountries(),
                       builder: (context, snapshot) {
@@ -143,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           return const Text('No countries available.');
                         } else {
                           return DropdownButton<String>(
-                            hint: const Text('Select a country'), // Default text
+                            hint: const Text('Select a country', style: TextStyle(color: Colors.grey)), // Greyed out default text
                             value: selectedCountry,
                             onChanged: (newValue) {
                               if (newValue != null &&
@@ -199,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Dropdown for selecting commencement year
                     if (!showCountrySelection)
                       DropdownButton<String>(
-                        hint: const Text('Select a start year'), // Default text
+                        hint: const Text('Select a start year', style: TextStyle(color: Colors.grey)), // Greyed out default text
                         value: selectedStartYear,
                         onChanged: (newValue) {
                           if (newValue != null &&
@@ -232,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Column(
                         children: [
                           DropdownButton<String>(
-                            hint: const Text('Select an end year'), // Default text
+                            hint: const Text('Select an end year', style: TextStyle(color: Colors.grey)), // Greyed out default text
                             value: selectedEndYear,
                             onChanged: (newValue) {
                               if (newValue != null &&
@@ -240,11 +245,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                 setState(() {
                                   selectedEndYear = newValue;
                                 });
+                                // Navigate to AllWinnersByYearRangeScreen
+                                if (selectedStartYear != null &&
+                                    selectedEndYear != 'Select an end year') {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AllWinnersByYearRangeScreen(
+                                            startYear: int.parse(selectedStartYear!),
+                                            endYear: int.parse(selectedEndYear),
+                                          ),
+                                    ),
+                                  );
+                                }
                               }
                             },
                             items: [
                               const DropdownMenuItem<String>(
-                                value: 'Select an end year', // Unique value
+                                value: 'Select an end year',
                                 child: Text('Select an end year'),
                               ),
                               ...List.generate(
@@ -263,28 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               }).toList(),
                             ],
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (selectedStartYear != null &&
-                                  selectedEndYear != 'Select an end year') {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        AllWinnersByYearRangeScreen(
-                                          startYear:
-                                          int.parse(selectedStartYear!),
-                                          endYear: int.parse(selectedEndYear),
-                                        ),
-                                  ),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                              Colors.blue.withOpacity(0.8), // Slightly lighter color
-                            ),
-                            child: const Text('Show Winners'),
-                          ),
+                          // Remove the separate button
                         ],
                       ),
                   ],
@@ -305,3 +302,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 }
+
+
+
