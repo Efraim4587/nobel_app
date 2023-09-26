@@ -67,7 +67,6 @@ class AllWinningCountriesScreen extends StatelessWidget {
                 final String category = countryData['category'];
                 final String year = countryData['year'];
                 final String countryCode = countryData['countryCode'];
-                print('cc: $countryCode');
 
                 final flagImagePath = countryCode.isNotEmpty
                     ? 'assets/flags/${countryCode.toLowerCase()}.svg'
